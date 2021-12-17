@@ -1,0 +1,75 @@
+### This used YOLO county as an example ## 
+## This code applies to all 347 counties used in this study ### 
+
+###### YOLO COUNTY CALIFORNIA ### 
+
+rm(list=ls())
+
+data <- read.csv(file.choose(),header = T)
+
+library(dplyr)
+library(tidyr)
+
+data <- data %>% select(NAME,DATE,PRCP,TMAX,TMIN)
+
+data <- separate(data, col = DATE, into = c('YEAR','MONTH'), sep = "-")
+
+months <- c("01" = "Jan", "02"="Feb", "03" ="Mar", "04" ="Apr", "05" ="May", "06" ="June", "07" ="July", 
+            "08" = "Aug", "09" = "Sep", "10" = "Oct", "11" = "Nov", "12" = "Dec")
+
+
+
+data$MONTH <- as.character(months[data$MONTH])
+
+data$YEAR <- as.numeric(data$YEAR)
+
+data <- data[order(data$MONTH,data$YEAR),] 
+
+
+PRCP_Month_YEAR <- data %>% 
+  group_by(MONTH,YEAR) %>% 
+  summarize(mean(PRCP,na.rm = TRUE))
+
+
+T_MAX <- data %>% 
+  group_by(MONTH,YEAR) %>% 
+  summarize(mean(TMAX, na.rm = TRUE))  
+
+
+T_MIN <- data %>% 
+  group_by(MONTH,YEAR) %>% 
+  summarize(mean(TMIN, na.rm = TRUE))  
+
+
+
+#### merging the three data frames  ### 
+
+
+YOLO <- merge(T_MAX,T_MIN,by=c("MONTH","YEAR"))
+
+YOLO <- merge(YOLO,PRCP_Month_YEAR,by=c("MONTH","YEAR"))
+
+County <- rep("Yolo_CA",408)
+
+#### Add the column name county #### 
+
+YOLO$County <- County
+
+#### renaming some of the columns 
+
+colnames(YOLO)
+
+YOLO <- rename(YOLO, Mean_TMAX = "mean(TMAX, na.rm = TRUE)")
+YOLO <- rename(YOLO, Mean_TMIN = "mean(TMIN, na.rm = TRUE)")
+YOLO <- rename(YOLO, Mean_Prcp = "mean(PRCP, na.rm = TRUE)")
+
+########## 
+
+library(tidyverse)
+
+YOLO_CA <- YOLO %>% 
+  pivot_wider(names_from = 'MONTH', values_from = c('Mean_Prcp','Mean_TMAX','Mean_TMIN'))
+
+
+write.csv(YOLO_CA,"D:/Drive_C_2_18_21/PhD_WORK/Chapter_4/Final_Project/Climate_Data/California_Processed/YOLO_CA.csv")                          
+
