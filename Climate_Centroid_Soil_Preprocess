@@ -1,0 +1,504 @@
+### The code puts all the climate and soil variables along with the county centroids into one .csv file ### 
+
+
+#####################################
+############## CALIFORNIA ############## 
+########################
+
+######## CLIMATE ###################
+
+##### Combined Climate Dataframe California ##### 
+### first set the working directory in the folder California_Processed
+
+rm(list = ls())
+
+climate <- list.files(pattern="*.csv")
+climate_files <- lapply(climate,read.delim,sep=",")
+
+library(dplyr)
+
+California_Climate <- do.call(rbind,climate_files)
+
+########## SOIL DATA ############## 
+
+############################
+##### Set the working directory for California_Soil 
+####################
+
+## reading in the combined soil files ## 
+
+California_Soil <- read.csv("CaliforniaCombinedSoilData.csv")
+
+############################# 
+####### CLIMATE CENTROIDS ##### 
+
+### Set the working directory #### 
+
+######### 
+
+California_Centroids <- read.csv("California_centroids.csv")
+
+##########################
+####### dropping the extra columns from climate, centroids, soil #### 
+########### 
+
+California_Climate <- California_Climate[-1]
+California_Centroids <- California_Centroids[-1]
+California_Soil <- California_Soil[-1]
+
+
+#### renaming the county name of California_Climate dataframe 
+
+names(California_Climate)[2] <- "COUNTYNAME"
+
+
+##################### 
+
+######  
+#### CALIFORNIA DATA #### 
+########### 
+
+library(tidyverse)
+library(purrr)
+
+
+California <- list(California_Climate,California_Centroids,California_Soil) %>% reduce(cbind,by="COUNTYNAME")
+
+################## 
+####### write out the file ####### 
+
+write.csv(California,"D:/Drive_C_2_18_21/PhD_WORK/Chapter_4/Final_Project/Combined_SOIL_CENTROID_CLIMATE_DATA/California.csv")
+
+
+########################
+#### COLORADO ######
+################### 
+
+
+################## CLIMATE #### 
+
+
+############## 
+######## Reading in the climate data #### 
+
+######### COLORADO ##### Set working directory ###
+
+#################### 
+
+rm(list = ls())
+
+climate <- list.files(pattern="*.csv")
+climate_files <- lapply(climate,read.delim,sep=",")
+
+
+Colorado_Climate <- do.call(bind_rows,climate_files)
+
+###### 
+### Reading in Soil data #### Colorado ####
+##### 
+
+Soil_Colorado <- read.csv("ColoradoCombinedSoilData.csv")
+
+##### Colorado Centroids ### 
+
+Colorado_Centroid <- read.csv("Colorado_centroids.csv")
+
+
+############### 
+###### 
+##############
+
+Colorado_Centroid <- Colorado_Centroid[-1]
+Colorado_Climate <- Colorado_Climate[-1]
+Soil_Colorado <- Soil_Colorado[-1]
+
+############ 
+####### COLORADO #### 
+
+#### renaming the county name of California_Climate dataframe 
+
+names(Colorado_Climate)[2] <- "COUNTYNAME"
+
+
+##################### 
+
+######  
+#### CALIFORNIA DATA #### 
+########### 
+
+library(tidyverse)
+library(purrr)
+
+
+Colorado <- list(Colorado_Climate,Colorado_Centroid,Soil_Colorado) %>% reduce(cbind,by="COUNTYNAME")
+
+
+################## 
+####### write out the file ####### 
+
+write.csv(Colorado,"D:/Drive_C_2_18_21/PhD_WORK/Chapter_4/Final_Project/Combined_SOIL_CENTROID_CLIMATE_DATA/Colorado.csv")
+
+
+
+################################# 
+#################### KANSAS #### 
+############################# 
+
+######## CLIMATE ############ 
+
+rm(list = ls())
+
+climate <- list.files(pattern = "*.csv")
+climate_files <- lapply(climate, read.delim,sep=",") 
+
+Kansas_climate <- do.call(bind_rows,climate_files)
+
+
+### Reading in Soil data #### Kansas ####
+##### 
+
+Soil_Kansas <- read.csv("KansasCombinedSoilData.csv")
+
+##### Kansas Centroids ### 
+
+Kansas_Centroid <- read.csv("Kansas_centroids.csv")
+
+
+############### 
+###### 
+##############
+
+Kansas_Centroid <- Kansas_Centroid[-1]
+Kansas_climate <- Kansas_climate[-1]
+Soil_Kansas <- Soil_Kansas[-1]
+
+############ 
+####### KANSAS #### 
+
+#### renaming the county name of Kansas_Climate dataframe 
+
+names(Kansas_climate)[2] <- "COUNTYNAME"
+
+
+##################### 
+
+######  
+#### KANSAS DATA #### 
+########### 
+
+library(tidyverse)
+library(purrr)
+
+
+Kansas <- list(Kansas_climate,Kansas_Centroid,Soil_Kansas) %>% reduce(cbind,by="COUNTYNAME")
+
+
+################## 
+####### write out the file ####### 
+
+write.csv(Kansas,"D:/Drive_C_2_18_21/PhD_WORK/Chapter_4/Final_Project/Combined_SOIL_CENTROID_CLIMATE_DATA/Kansas.csv")
+
+
+################################# 
+#################### MINNESOTA #### 
+############################# 
+
+######## CLIMATE ############ 
+
+rm(list = ls())
+
+climate <- list.files(pattern = "*.csv")
+climate_files <- lapply(climate, read.delim,sep=",") 
+
+Minnesota_climate <- do.call(bind_rows,climate_files)
+
+
+### Reading in Soil data #### MINNESOTA ####
+##### 
+
+Soil_Minnesota <- read.csv("MinnesotaCombinedSoilData.csv")
+
+##### Minnesota Centroids ### 
+
+Minnesota_Centroid <- read.csv("Minnesota_centroids.csv")
+
+
+############### 
+###### 
+##############
+
+Minnesota_Centroid <- Minnesota_Centroid[-1]
+Minnesota_climate <- Minnesota_climate[-1]
+Soil_Minnesota <- Soil_Minnesota[-1]
+
+############ 
+####### MINNESOTA #### 
+
+#### renaming the county name of Kansas_Climate dataframe 
+
+names(Minnesota_climate)[2] <- "COUNTYNAME"
+
+
+##################### 
+
+######  
+#### MINNESOTA DATA #### 
+########### 
+
+library(tidyverse)
+library(purrr)
+
+
+Minnesota <- list(Minnesota_climate,Minnesota_Centroid,Soil_Minnesota) %>% reduce(cbind,by="COUNTYNAME")
+
+
+################## 
+####### write out the file ####### 
+
+write.csv(Minnesota,"D:/Drive_C_2_18_21/PhD_WORK/Chapter_4/Final_Project/Combined_SOIL_CENTROID_CLIMATE_DATA/Minnesota.csv")
+
+
+
+#########################
+################ NEBRASKA #### 
+########
+
+rm(list = ls())
+
+climate <- list.files(pattern = "*.csv")
+climate_files <- lapply(climate, read.delim,sep=",") 
+
+Nebraska_climate <- do.call(bind_rows,climate_files)
+
+
+### Reading in Soil data #### Kansas ####
+##### 
+
+Soil_Nebraska <- read.csv("NebraskaCombinedSoilData.csv")
+
+##### Kansas Centroids ### 
+
+Nebraska_Centroid <- read.csv("Nebraska_centroids.csv")
+
+
+############### 
+###### 
+##############
+
+Nebraska_Centroid <- Nebraska_Centroid[-1]
+Nebraska_climate <- Nebraska_climate[-1]
+Soil_Nebraska <- Soil_Nebraska[-1]
+
+############ 
+####### NEBRASKA #### 
+
+#### renaming the county name of Kansas_Climate dataframe 
+
+names(Nebraska_climate)[2] <- "COUNTYNAME"
+
+
+##################### 
+
+######  
+#### NEBRASKA DATA #### 
+########### 
+
+library(tidyverse)
+library(purrr)
+
+
+Nebraska <- list(Nebraska_climate,Nebraska_Centroid,Soil_Nebraska) %>% reduce(cbind,by="COUNTYNAME")
+
+
+################## 
+####### write out the file ####### 
+
+write.csv(Nebraska,"D:/Drive_C_2_18_21/PhD_WORK/Chapter_4/Final_Project/Combined_SOIL_CENTROID_CLIMATE_DATA/Nebraska.csv")
+
+
+
+#########################
+################ NORTH DAKOTA #### 
+########
+
+rm(list = ls())
+
+climate <- list.files(pattern = "*.csv")
+climate_files <- lapply(climate, read.delim,sep=",") 
+
+NorthDakota_climate <- do.call(bind_rows,climate_files)
+
+##### changing all _nd to ND ### 
+
+### 
+
+NorthDakota_climate$County <- gsub("_Nd","_ND",NorthDakota_climate$County)
+
+
+### Reading in Soil data #### North Dakota ####
+##### 
+
+Soil_NorthDakota <- read.csv("NorthDakotaCombinedSoilData.csv")
+
+##### Kansas Centroids ### 
+
+NorthDakota_Centroid <- read.csv("NorthDakota_centroids.csv")
+
+###### 
+############### 
+###### 
+##############
+
+NorthDakota_Centroid <- NorthDakota_Centroid[-1]
+NorthDakota_climate <- NorthDakota_climate[-1]
+Soil_NorthDakota <- Soil_NorthDakota[-1]
+
+############ 
+####### NEBRASKA #### 
+
+#### renaming the county name of Kansas_Climate dataframe 
+
+names(NorthDakota_climate)[2] <- "COUNTYNAME"
+
+
+##################### 
+
+######  
+#### NorthDakota DATA #### 
+########### 
+
+library(tidyverse)
+library(purrr)
+
+
+NorthDakota <- list(NorthDakota_climate,NorthDakota_Centroid,Soil_NorthDakota) %>% reduce(cbind,by="COUNTYNAME")
+
+
+################## 
+####### write out the file ####### 
+
+write.csv(NorthDakota,"D:/Drive_C_2_18_21/PhD_WORK/Chapter_4/Final_Project/Combined_SOIL_CENTROID_CLIMATE_DATA/NorthDakota.csv")
+
+
+###################################
+######################## SOUTH DAKOTA ######### 
+###################################
+
+
+rm(list = ls())
+
+climate <- list.files(pattern = "*.csv")
+climate_files <- lapply(climate, read.delim,sep=",") 
+
+SouthDakota_climate <- do.call(bind_rows,climate_files)
+
+
+### Reading in Soil data #### South Dakota ####
+##### 
+
+Soil_SouthDakota <- read.csv("SouthDakotaCombinedSoilData.csv")
+
+##### South Dakota Centroids ### 
+
+SouthDakota_Centroid <- read.csv("SouthDakota_centroids.csv")
+
+
+############### 
+###### 
+##############
+
+SouthDakota_Centroid <- SouthDakota_Centroid[-1]
+SouthDakota_climate <- SouthDakota_climate[-1]
+Soil_SouthDakota <- Soil_SouthDakota[-1]
+
+############ 
+####### NEBRASKA #### 
+
+#### renaming the county name of Kansas_Climate dataframe 
+
+names(SouthDakota_climate)[2] <- "COUNTYNAME"
+
+
+##################### 
+
+######  
+#### South Dakota DATA #### 
+########### 
+
+library(tidyverse)
+library(purrr)
+
+
+SouthDakota <- list(SouthDakota_climate,SouthDakota_Centroid,Soil_SouthDakota) %>% reduce(cbind,by="COUNTYNAME")
+
+
+################## 
+####### write out the file ####### 
+
+write.csv(SouthDakota,"D:/Drive_C_2_18_21/PhD_WORK/Chapter_4/Final_Project/Combined_SOIL_CENTROID_CLIMATE_DATA/SouthDakota.csv")
+
+###################################
+######################## TEXAS ######### 
+###################################
+
+
+rm(list = ls())
+
+climate <- list.files(pattern = "*.csv")
+climate_files <- lapply(climate, read.delim,sep=",") 
+
+Texas_climate <- do.call(bind_rows,climate_files)
+
+
+### Reading in Soil data #### Texas ####
+##### 
+
+Soil_Texas <- read.csv("TexasCombinedSoilData.csv")
+
+##### Texas Centroids ### 
+
+Texas_Centroid <- read.csv("Texas_centroids.csv")
+
+########### 
+## 
+
+############### 
+###### 
+##############
+
+Texas_Centroid <- Texas_Centroid[-1]
+Texas_climate <- Texas_climate[-1]
+Soil_Texas <- Soil_Texas[-1]
+
+############ 
+####### TEXAS DATA #### 
+
+#### renaming the county name of Texas_Climate dataframe 
+
+names(Texas_climate)[2] <- "COUNTYNAME"
+
+
+##################### 
+
+######  
+#### Texas DATA #### 
+########### 
+
+library(tidyverse)
+library(purrr)
+
+
+Texas <- list(Texas_climate,Texas_Centroid,Soil_Texas) %>% reduce(cbind,by="COUNTYNAME")
+
+
+################## 
+####### write out the file ####### 
+
+write.csv(Texas,"D:/Drive_C_2_18_21/PhD_WORK/Chapter_4/Final_Project/Combined_SOIL_CENTROID_CLIMATE_DATA/Texas.csv")
+
+
+################ 
+
+
+
+
