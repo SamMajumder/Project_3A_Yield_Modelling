@@ -1,0 +1,222 @@
+
+rm(list=ls())
+
+yield <- read.csv("Seed_yield_USDA.csv")
+
+library(dplyr)
+library(tidyr)
+
+str(yield)
+
+yield$LOCATION <- factor(yield$LOCATION)
+
+yield <- yield %>% select(YEAR,LOCATION,AREA.HARVESTED..OIL.TYPE.in.ACRES,AREA.PLANTED..OIL.TYPE.in.ACRES,PRODUCTION..OIL.TYPE.in.LB,
+                          YIELD..OIL.TYPE.in.LB...ACRE)
+
+
+str(yield)
+
+library(tidyverse)
+
+##### removing the comma #### gsub let's you edit character and string ####
+
+yield$AREA.HARVESTED..OIL.TYPE.in.ACRES <- gsub(",","",yield$AREA.HARVESTED..OIL.TYPE.in.ACRES)
+
+yield$AREA.PLANTED..OIL.TYPE.in.ACRES <- gsub(",","",yield$AREA.PLANTED..OIL.TYPE.in.ACRES)
+
+yield$YIELD..OIL.TYPE.in.LB...ACRE <- gsub(",","",yield$YIELD..OIL.TYPE.in.LB...ACRE)
+
+
+str(yield)
+
+####change all the character variables to numeric
+
+yield <- yield %>% mutate_if(is.character,as.integer)
+
+###### separating the LOCATION COLUMN #### 
+
+yield <- separate(yield,col = LOCATION, into = c("STATE","REGION","COUNTY"), sep = ",")
+
+#### 
+
+str(yield) 
+
+#### dropping the region column ### 
+
+yield <- yield[-3]
+
+############# remove the OKHLAHOMA rows ### 
+
+yield <- subset(yield, yield$STATE!="OKLAHOMA")
+
+
+##### changing the state name to state abbrev ### 
+
+str(yield)
+
+unique(yield$STATE)
+
+
+yield$STATE[yield$STATE == "CALIFORNIA"] <- "CA"
+
+yield$STATE[yield$STATE == "COLORADO"] <- "CO"
+
+yield$STATE[yield$STATE == "NORTH DAKOTA"] <- "ND" 
+
+yield$STATE[yield$STATE == "SOUTH DAKOTA"] <- "SD" 
+
+yield$STATE[yield$STATE == "MINNESOTA"] <- "MN" 
+
+yield$STATE[yield$STATE == "TEXAS"] <- "TX" 
+
+yield$STATE[yield$STATE == "KANSAS"] <- "KS" 
+
+yield$STATE[yield$STATE == "NEBRASKA"] <- "NE"
+
+str(yield)
+
+##### REMOVING THE OTHER COMBINED COUNTIES 
+## STEP (SUBSET BASED ON STATE)
+############ 
+
+Yield_ND <- filter(yield, STATE=="ND") 
+
+Yield_SD <- filter(yield, STATE=="SD")
+
+Yield_MN <- filter(yield, STATE=="MN")
+
+Yield_TX <- filter(yield, STATE=="TX")
+
+Yield_KS <- filter(yield, STATE=="KS")
+
+Yield_NE <- filter(yield, STATE=="NE")
+
+Yield_CA <- filter(yield, STATE=="CA")
+
+Yield_CO <- filter(yield, STATE=="CO")
+
+##### 
+### Removing the "OTHER (COMBINED) COUNTIES ### 
+
+### STEP 1 Split the state yield dataframes into smaller county dataframes and put them in a list 
+
+split_data_CA <- split(Yield_CA,f=Yield_CA$COUNTY)  ## SPLIT IT INTO LISTS 
+
+split_data_CO <- split(Yield_CO,f=Yield_CO$COUNTY)
+
+split_data_KS <- split(Yield_KS,f=Yield_KS$COUNTY)
+
+split_data_MN <- split(Yield_MN,f=Yield_MN$COUNTY)
+
+split_data_ND <- split(Yield_ND,f=Yield_ND$COUNTY)
+
+split_data_NE <- split(Yield_NE,f=Yield_NE$COUNTY)
+
+split_data_SD <- split(Yield_SD,f=Yield_SD$COUNTY)
+
+split_data_TX <- split(Yield_TX,f=Yield_TX$COUNTY)
+
+#Step 2 ## remove the element which contains the OTHER COUNTIES ### 
+
+
+split_data_CA <- split_data_CA[-3]
+
+split_data_CO <- split_data_CO[-16]
+
+split_data_KS <- split_data_KS[-35]  
+
+split_data_MN <- split_data_MN[-51]
+
+split_data_ND <- split_data_ND[-34]
+
+split_data_NE <- split_data_NE[-45]  
+
+split_data_SD <- split_data_SD[-49]
+
+split_data_TX <- split_data_TX[-38]
+
+
+# Step 3### NOW rbind all the dataframes to create a yield dataset without the OTHER (COMBINED) COUNTIES entry for each STATE
+
+Yield_CA <- do.call(rbind,split_data_CA)
+
+Yield_CO <- do.call(rbind,split_data_CO)
+
+Yield_KS <- do.call(rbind,split_data_KS)
+
+Yield_MN <- do.call(rbind,split_data_MN)
+
+Yield_ND <- do.call(rbind,split_data_ND)
+
+Yield_NE <- do.call(rbind,split_data_NE)
+
+Yield_SD <- do.call(rbind,split_data_SD)
+
+Yield_TX <- do.call(rbind,split_data_TX) 
+
+###### 
+####### MAKING THE COUNTY NAME AND THE STATE ABBREV AS ONE COLUMN ##
+
+yield$COUNTY <- paste(yield$COUNTY,yield$STATE,sep = "_")
+
+Yield_CA$COUNTY <- paste(Yield_CA$COUNTY,Yield_CA$STATE,sep = "_")
+
+Yield_CO$COUNTY <- paste(Yield_CO$COUNTY,Yield_CO$STATE,sep = "_")
+
+Yield_KS$COUNTY <- paste(Yield_KS$COUNTY,Yield_KS$STATE,sep = "_")
+
+Yield_MN$COUNTY <- paste(Yield_MN$COUNTY,Yield_MN$STATE,sep = "_")
+
+Yield_ND$COUNTY <- paste(Yield_ND$COUNTY,Yield_ND$STATE,sep = "_")
+
+Yield_NE$COUNTY <- paste(Yield_NE$COUNTY,Yield_NE$STATE,sep = "_")
+
+Yield_SD$COUNTY <- paste(Yield_SD$COUNTY,Yield_SD$STATE,sep = "_")
+
+Yield_TX$COUNTY <- paste(Yield_TX$COUNTY,Yield_TX$STATE,sep = "_")
+
+#### Drop the STATE column altogether 
+
+Yield_CA <- Yield_CA[-2]
+
+Yield_CO <- Yield_CO[-2]
+
+Yield_KS <- Yield_KS[-2]
+
+Yield_MN <- Yield_MN[-2]
+
+Yield_ND <- Yield_ND[-2]
+
+Yield_NE <- Yield_NE[-2]
+
+Yield_SD <- Yield_SD[-2]
+
+Yield_TX <- Yield_TX[-2]
+
+##### rbind all the files now ### 
+
+Yield <- rbind(Yield_CA,Yield_CO,Yield_KS,Yield_MN,Yield_ND,Yield_NE,Yield_SD,Yield_TX)
+
+
+str(Yield)
+
+Yield$COUNTY <- gsub(" ","",Yield$COUNTY)
+
+##### Changing the COUNTY column to COUNTYNAME ### 
+
+colnames(Yield)[2] <- "COUNTYNAME"
+
+str(Yield)
+
+write.csv(Yield,"D:/Drive_C_2_18_21/PhD_WORK/Chapter_4/Final_Project/Yield_Data/Yield.csv")
+
+
+
+
+
+
+
+
+
+
+
