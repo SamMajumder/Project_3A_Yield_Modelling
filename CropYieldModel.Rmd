@@ -1,0 +1,331 @@
+---
+title: "FinalAnalysisCropYield"
+author: "Sam Majumder"
+date: "1/17/2022"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+#### MODELLING #### 
+
+### reading in the dataset ### 
+
+data <- read.csv("Combined.csv")
+
+## removing columns which we don't need ### 
+
+data <- data[,-c(1,4,6)]
+
+#####  Setting aside the counties in order of their observation number and year and coordinates in the main dataset ### 
+### The file should conatain YEAR, COUNTY NAME AND THE COORDINATES ##
+
+
+data_county_observation <- data[,c(1,2,41,42)]
+
+```
+
+
+```{r}
+### 
+library(lattice)
+library(ggplot2)
+library(caret)
+
+#### Let's create a training and a test set ### 
+### 
+
+s <- createDataPartition(y=data$YIELD..OIL.TYPE.in.LB...ACRE,p=0.70,list = F)
+train <- data[s,]
+test <- data[-s,]
+
+#### LET's isolate the coordinates, year and county name from the data frame
+### First Coordinates
+
+coordinates_train <- train[,c(41,42)]
+
+coordinates_test <- test[,c(41,42)]
+
+### now lets isolate the YEAR column out ### 
+
+YEAR_train <- data.frame(train[,c(1)])
+
+YEAR_test <- data.frame(test[,c(1)])
+
+###### COUNTY NAME ### 
+
+County_name_train <- data.frame(train[,c(2)])
+
+County_name_test <- data.frame(test[,c(2)])
+
+########## 
+#### Removing the county, the year and the coordinates before we impute our data### 
+
+#### Now removing the coordinates and the YEAR from the train_imputed and the test_imputed ### 
+
+train <- train[,-c(1,2,41,42)]
+
+test <- test[,-c(1,2,41,42)]
+
+##### 
+########## data imputation ####
+
+
+library(randomForest)
+
+train_imputed <- rfImpute(YIELD..OIL.TYPE.in.LB...ACRE~., data = train)
+test_imputed <- rfImpute(YIELD..OIL.TYPE.in.LB...ACRE~., data = test)
+
+
+##### Let's now scale the data ## this improves our prediction
+
+##### now standardizing 
+
+
+train_standard <- data.frame(scale(train_imputed))
+
+test_standard <- data.frame(scale(test_imputed))  
+
+ 
+###### Now isolating the factor by which the yield values where centered and scaled in the test set for later backtransforming 
+
+test_imputed_yield_scaled_center_factor <- scale(test_imputed$YIELD..OIL.TYPE.in.LB...ACRE)
+
+
+#### Add the coordinates back to the dataset ### 
+
+train_standard <- cbind(train_standard,coordinates_train)
+
+test_standard <- cbind(test_standard,coordinates_test)
+
+#### Adding the YEAR back in #### 
+
+train_standard <- cbind(train_standard,YEAR_train)
+
+test_standard <- cbind(test_standard,YEAR_test)
+
+### change the name of the YEAR column to YEAR ### 
+
+colnames(train_standard)[47] <- "YEAR"
+
+colnames(test_standard)[47] <- "YEAR"
+
+``` 
+
+```{r}
+
+####### FEATURE SELECTION BY RFE #### 
+
+subsets <- c(1,5,10,15,20,30,46)
+
+parameters <- rfeControl(functions = rfFuncs,method = "cv",number = 5,verbose = T)
+
+
+
+
+set.seed(1234)
+
+Rfe_features <- rfe(YIELD..OIL.TYPE.in.LB...ACRE~.,data = train_standard,
+                    sizes=subsets,rfeControl=parameters)
+
+
+Rfe_features
+
+plot(Rfe_features,type=c("o","g"))
+
+### PUTTING THE RFE RESULTS IN A NICE DATAFRAME ###
+
+Rfe_results <- data.frame(Rfe_features$results)
+
+### writing out the Rfe results ### 
+
+write.csv(Rfe_results,"Rfe_results_yield.csv")
+
+
+predictors(Rfe_features)
+
+#### The best susbset is 30 (all the feature)
+
+Best_subset <- data.frame(predictors(Rfe_features))
+
+##### writing out the best predictors for RFE ### 
+
+write.csv(Best_subset,"Best_RFE_Features_yield.csv")
+
+####### Only keeping the important variables ### 
+
+library(dplyr)
+
+train_rfe <- train_standard %>% select(YIELD..OIL.TYPE.in.LB...ACRE,YEAR,LON,Mean_Prcp_July,Mean_TMAX_July,
+                                       NationalCommodityCropProductivityIndex,Mean_TMIN_Sep,Mean_TMAX_June,
+                                       Mean_Prcp_Feb,Mean_TMAX_Aug,Mean_TMIN_Jan,Mean_TMAX_Jan,Mean_TMAX_Nov,
+                                       Mean_TMIN_June,Mean_Prcp_May,Mean_TMAX_Oct,Mean_TMIN_Feb,Mean_TMIN_May,
+                                       Mean_TMIN_Aug,Mean_TMIN_Mar,AREA.PLANTED..OIL.TYPE.in.ACRES,Mean_TMIN_Dec,
+                                       Mean_TMIN_Oct,Mean_TMAX_Sep,Mean_TMAX_May,Mean_TMIN_July,Mean_Prcp_June,
+                                       Mean_TMAX_Dec,LAT,Mean_TMAX_Feb,Mean_TMIN_Nov)
+
+
+test_rfe <- test_standard %>% select(YIELD..OIL.TYPE.in.LB...ACRE,YEAR,LON,Mean_Prcp_July,Mean_TMAX_July,
+                                     NationalCommodityCropProductivityIndex,Mean_TMIN_Sep,Mean_TMAX_June,
+                                     Mean_Prcp_Feb,Mean_TMAX_Aug,Mean_TMIN_Jan,Mean_TMAX_Jan,Mean_TMAX_Nov,
+                                     Mean_TMIN_June,Mean_Prcp_May,Mean_TMAX_Oct,Mean_TMIN_Feb,Mean_TMIN_May,
+                                     Mean_TMIN_Aug,Mean_TMIN_Mar,AREA.PLANTED..OIL.TYPE.in.ACRES,Mean_TMIN_Dec,
+                                     Mean_TMIN_Oct,Mean_TMAX_Sep,Mean_TMAX_May,Mean_TMIN_July,Mean_Prcp_June,
+                                     Mean_TMAX_Dec,LAT,Mean_TMAX_Feb,Mean_TMIN_Nov)
+
+
+
+
+### Modelling ### Random Forest  ### 
+
+Rf <- randomForest(YIELD..OIL.TYPE.in.LB...ACRE~.,data = train_rfe)
+
+Rf
+
+varImpPlot(Rf)
+
+p_rf_train <- predict(Rf,train_rfe)
+
+p_rf_test <- predict(Rf,test_rfe)
+
+RMSE(p_rf_train,train_rfe$YIELD..OIL.TYPE.in.LB...ACRE)
+
+RMSE(p_rf_test,test_rfe$YIELD..OIL.TYPE.in.LB...ACRE)
+
+
+#### Adding the 
+###### Adding the county names back in #### 
+
+train_final <- cbind(train_rfe,County_name_train)
+
+test_final <- cbind(test_rfe,County_name_test)
+
+#### change the name of the COUNTY column to COUNTYNAME ###
+
+colnames(train_final)[32] <- "COUNTYNAMES"
+
+colnames(test_final)[32] <- "COUNTYNAMES"
+
+###### 
+##### Write out both the train and test files for ARCGIS mapping ### or for future training and testing 
+
+write.csv(train_final,"SunflowerYield_train.csv")
+write.csv(test_final,"SunflowerYield_test.csv")
+
+
+######### LET'S CREATE THE PREDICTION FILE #### 
+#### 
+##### 
+
+predicted_values <- data.frame("COUNTYNAME"=test_final$COUNTYNAMES,"Yield"=p_rf_test)
+
+### Adding the coordinates to this file ### 
+
+predicted_values_final <- cbind(predicted_values,coordinates_test)
+
+#### Adding the year to this dataset ## 
+
+predicted_values_final <- cbind(predicted_values_final,YEAR_test)
+
+#### renaming the YEAR column #### 
+
+colnames(predicted_values_final)[5] <- "YEAR"
+
+### add the area planted column too ## Edit the STATE names to be full State names 
+### Also the first letter should be capital and all the other letters should be small
+
+## first let's isolate the total area planted 
+
+Total_Area_Planted_test <- data.frame(test_rfe$AREA.PLANTED..OIL.TYPE.in.ACRES)
+
+#### Cbind the total area to final predicted dataset ### 
+
+Predicted_values_final <- cbind(predicted_values_final,Total_Area_Planted_test)
+
+colnames(Predicted_values_final)[6] <- "TotalAreaPlantedInAcresStandardized"
+
+#### Separating the COUNTYNAME column into two columns ## 
+
+library(tidyr)
+
+
+Predicted_values_final <- separate(Predicted_values_final,col= COUNTYNAME, into = c("COUNTY","STATE"),sep = "_")
+
+### Changing the state abbrevs to full state name ### 
+
+Predicted_values_final$STATE[Predicted_values_final$STATE=="CA"] <- "California"
+
+Predicted_values_final$STATE[Predicted_values_final$STATE=="CO"] <- "Colorado"
+
+Predicted_values_final$STATE[Predicted_values_final$STATE=="ND"] <- "North Dakota"
+
+Predicted_values_final$STATE[Predicted_values_final$STATE=="SD"] <- "South Dakota"
+
+Predicted_values_final$STATE[Predicted_values_final$STATE=="MN"] <- "Minnesota"
+
+Predicted_values_final$STATE[Predicted_values_final$STATE=="TX"] <- "Texas"
+
+Predicted_values_final$STATE[Predicted_values_final$STATE=="KS"] <- "Kansas"
+
+Predicted_values_final$STATE[Predicted_values_final$STATE=="NE"] <- "Nebraska"
+
+#### Now editing the names of the counties ## Block to normal script
+
+library(stringr)
+
+Predicted_values_final$COUNTY <- str_to_title(Predicted_values_final$COUNTY)
+
+#### Changing the Yield column to PredictedYieldStandardized 
+
+colnames(Predicted_values_final)[3] <- "PredictedYieldStandardized"
+
+##### Now Adding the Actual Yield Standardized column to the data ### 
+
+TestFinalYieldStandardized <- test_final$YIELD..OIL.TYPE.in.LB...ACRE
+
+Predicted_values_final <- cbind(Predicted_values_final,TestFinalYieldStandardized)
+
+### Changing the name of this column to ActualYieldStandardized ### 
+
+colnames(Predicted_values_final)[8] <- "ActualYieldStandardized"
+
+##### Now adding the non standardized real predicted yield, back transforming from the scaled values ## 
+
+### First we have to isolate the predicted values to a real scale ### 
+
+PredictedYieldStandardized <- Predicted_values_final$PredictedYieldStandardized
+
+### next let's backtransform the data ### Actual Yield 
+
+PredictedYieldLBperAcre <- data.frame(PredictedYieldStandardized * attr(test_imputed_yield_scaled_center_factor,"scaled:scale") + attr(test_imputed_yield_scaled_center_factor,"scaled:center"))
+
+#### Now let's isolate the standardized actual values of Yield 
+##### Actual Yield #### 
+
+ActualValuesStandardized <- Predicted_values_final$ActualYieldStandardized
+
+##### now let's backtransform the data ### Actual Yield 
+
+ActualYieldLBperAcre <- data.frame(ActualValuesStandardized * attr(test_imputed_yield_scaled_center_factor,"scaled:scale") + attr(test_imputed_yield_scaled_center_factor,"scaled:center"))
+
+
+### Now Column Binding the PredictedYieldLBperAcre and ActualYieldLBperacre and AREA PLANTED IN ACRES 
+
+Predicted_values_final <- cbind(Predicted_values_final,PredictedYieldLBperAcre,ActualYieldLBperAcre,test_imputed$AREA.PLANTED..OIL.TYPE.in.ACRES)
+
+### Now renaming the the columns ### 
+
+colnames(Predicted_values_final)[9] <- "PredictedYieldLBperAcre"
+
+colnames(Predicted_values_final)[10] <- "ActualYieldLBperAcre"
+
+colnames(Predicted_values_final)[11] <- "AreaPlantedinAcres"
+
+
+##### Writing out the final prediction file ### 
+
+write.csv(Predicted_values_final,"D:/Drive_C_2_18_21/PhD_WORK/Chapter_4/Final_Project/FINAL_PLOTS_and_data/PredictedYield.csv")
+```

@@ -1,0 +1,321 @@
+---
+title: "CropFailureModel"
+author: "Sam Majumder"
+date: "1/17/2022"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+#### MODELLING #### Crop Failure ### 
+
+### reading in the dataset ### 
+
+data <- read.csv("Combined.csv")
+
+####### Now computing the Crop Failure values ### 
+
+data$CROP_FAILURE <- (data$AREA.PLANTED..OIL.TYPE.in.ACRES - data$AREA.HARVESTED..OIL.TYPE.in.ACRES)
+
+## removing columns which we don't need ### 
+
+data <- data[,-c(1,4,6,7)]
+
+#####  Setting aside the counties in order of their year recorded and coordinates in the main dataset ### 
+
+data_county_observation <- data[,c(1,2,40,41)]
+
+### 
+library(lattice)
+library(ggplot2)
+library(caret)
+
+#### Let's create a training and a test set ### 
+### 
+
+s <- createDataPartition(y=data$CROP_FAILURE,p=0.70,list = F)
+train <- data[s,]
+test <- data[-s,]
+
+#### LET's isolate the coordinates, year and county name from the data frame
+
+coordinates_train <- train[,c(40,41)]
+
+coordinates_test <- test[,c(40,41)]
+
+### now keep the YEAR column out ### 
+
+YEAR_train <- data.frame(train[,c(1)])
+
+YEAR_test <- data.frame(test[,c(1)])
+
+###### COUNTY NAME ### 
+
+County_name_train <- data.frame(train[,c(2)])
+
+County_name_test <- data.frame(test[,c(2)])
+
+########## 
+#### Removing the county, the year and the coordinates before we impute our data### 
+
+#### Now removing the coordinates and the YEAR from the train_imputed and the test_imputed ### 
+
+train <- train[,-c(1,2,40,41)]
+
+test <- test[,-c(1,2,40,41)]
+
+##### 
+########## data imputation ####
+
+
+library(randomForest)
+
+train_imputed <- rfImpute(CROP_FAILURE~., data = train)
+test_imputed <- rfImpute(CROP_FAILURE~., data = test)
+
+
+##### Let's now scale the data ## this improves our prediction
+
+##### now standardizing 
+
+
+train_standard <- data.frame(scale(train_imputed))
+
+test_standard <- data.frame(scale(test_imputed))
+
+############# 
+
+###### Now isolating the factor by which the crop failure values where centered and scaled in the test set for later backtransforming 
+
+test_imputed_cropfailure_scaled_center_factor <- scale(test_imputed$CROP_FAILURE)
+
+
+#### Add the coordinates back to the dataset ### 
+
+train_standard <- cbind(train_standard,coordinates_train)
+
+test_standard <- cbind(test_standard,coordinates_test)
+
+#### Adding the YEAR back in #### 
+
+train_standard <- cbind(train_standard,YEAR_train)
+
+test_standard <- cbind(test_standard,YEAR_test)
+
+
+### change the name of the YEAR column to YEAR ### 
+
+colnames(train_standard)[47] <- "YEAR"
+
+colnames(test_standard)[47] <- "YEAR"
+
+
+####### FEATURE SELECTION BY RFE #### 
+
+subsets <- c(1,5,10,15,20,30,46)
+
+parameters <- rfeControl(functions = rfFuncs,method = "cv",number = 5,verbose = T)
+
+
+set.seed(1234)
+
+Rfe_features <- rfe(CROP_FAILURE~.,data = train_standard,
+                    sizes=subsets,rfeControl=parameters)
+
+
+Rfe_features
+
+plot(Rfe_features,type=c("o","g"))
+
+### PUTTING THE RFE RESULTS IN A NICE DATAFRAME ###
+
+Rfe_results <- data.frame(Rfe_features$results)
+
+### writing out the Rfe results ### 
+
+write.csv(Rfe_results,"Rfe_results_cropfailure.csv")
+
+
+predictors(Rfe_features)
+
+#### The best susbset is 30 (all the feature)
+
+Best_subset <- data.frame(predictors(Rfe_features))
+
+##### writing out the best predictors for RFE ### 
+
+write.csv(Best_subset,"Best_RFE_Features_cropfailure.csv")
+
+####### Only keeping the important variables ### 
+
+library(dplyr)
+
+train_rfe <- train_standard %>% select(CROP_FAILURE,AREA.PLANTED..OIL.TYPE.in.ACRES,Mean_TMAX_July,Mean_TMAX_June,Mean_TMAX_Nov,
+                                       Mean_TMIN_Oct,Mean_TMIN_July,Mean_TMIN_Apr,Mean_TMAX_Apr,Mean_TMIN_Nov,Mean_TMAX_May,
+                                       Mean_TMAX_Oct,Mean_TMAX_Dec,Mean_TMAX_Sep,Mean_Prcp_July,Mean_Prcp_June,YEAR,LON,Mean_Prcp_Apr,
+                                       Mean_TMIN_May,LAT,Mean_TMAX_Jan,Mean_Prcp_Aug,Mean_Prcp_May,Mean_TMAX_Aug,Mean_TMIN_Jan,Mean_TMIN_Mar,
+                                       SoilHydricClass,Mean_TMIN_June,NationalCommodityCropProductivityIndex,Mean_TMAX_Feb)
+
+
+test_rfe <- test_standard %>% select(CROP_FAILURE,AREA.PLANTED..OIL.TYPE.in.ACRES,Mean_TMAX_July,Mean_TMAX_June,Mean_TMAX_Nov,
+                                     Mean_TMIN_Oct,Mean_TMIN_July,Mean_TMIN_Apr,Mean_TMAX_Apr,Mean_TMIN_Nov,Mean_TMAX_May,
+                                     Mean_TMAX_Oct,Mean_TMAX_Dec,Mean_TMAX_Sep,Mean_Prcp_July,Mean_Prcp_June,YEAR,LON,Mean_Prcp_Apr,
+                                     Mean_TMIN_May,LAT,Mean_TMAX_Jan,Mean_Prcp_Aug,Mean_Prcp_May,Mean_TMAX_Aug,Mean_TMIN_Jan,Mean_TMIN_Mar,
+                                     SoilHydricClass,Mean_TMIN_June,NationalCommodityCropProductivityIndex,Mean_TMAX_Feb)
+
+
+### Modelling ### Random Forest  ### 
+
+Rf <- randomForest(CROP_FAILURE~.,data = train_rfe)
+
+Rf
+
+varImpPlot(Rf)
+
+p_rf_train <- predict(Rf,train_rfe)
+
+p_rf_test <- predict(Rf,test_rfe)
+
+RMSE(p_rf_train,train_rfe$CROP_FAILURE)
+
+RMSE(p_rf_test,test_rfe$CROP_FAILURE)
+
+
+#### Adding the 
+###### Adding the county names back in #### 
+
+train_final <- cbind(train_rfe,County_name_train)
+
+test_final <- cbind(test_rfe,County_name_test)
+
+#### change the name of the COUNTY column to COUNTYNAME ###
+
+colnames(train_final)[32] <- "COUNTYNAMES"
+
+colnames(test_final)[32] <- "COUNTYNAMES"
+
+###### 
+##### Write out both the train and test files for ARCGIS mapping ### 
+
+write.csv(train_final,"SunflowerYield_train_cropfailure.csv")
+write.csv(test_final,"SunflowerYield_test_cropfailure.csv")
+
+
+######### LET'S CREATE THE PREDICTION FILE #### 
+#### 
+##### 
+
+predicted_values <- data.frame("COUNTYNAME"=test_final$COUNTYNAMES,"CropFailure"=p_rf_test)
+
+### Adding the coordinates to this file ### 
+
+predicted_values_final <- cbind(predicted_values,coordinates_test)
+
+#### Adding the year to this dataset ## 
+
+predicted_values_final <- cbind(predicted_values_final,YEAR_test)
+
+#### renaming the YEAR column #### 
+
+colnames(predicted_values_final)[5] <- "YEAR"
+
+
+
+## Edit the STATE names to be full State names 
+### Also the first letter should be capital and all the other letters should be small
+### ALSO Compute the non standardized crop failure values from standardized values 
+
+
+#### Separating the COUNTYNAME column into two columns ## 
+
+library(tidyr)
+
+
+Predicted_values_final <- separate(predicted_values_final,col= COUNTYNAME, into = c("COUNTY","STATE"),sep = "_")
+
+### Changing the state abbrevs to full state name ### 
+
+Predicted_values_final$STATE[Predicted_values_final$STATE=="CA"] <- "California"
+
+Predicted_values_final$STATE[Predicted_values_final$STATE=="CO"] <- "Colorado"
+
+Predicted_values_final$STATE[Predicted_values_final$STATE=="ND"] <- "North Dakota"
+
+Predicted_values_final$STATE[Predicted_values_final$STATE=="SD"] <- "South Dakota"
+
+Predicted_values_final$STATE[Predicted_values_final$STATE=="MN"] <- "Minnesota"
+
+Predicted_values_final$STATE[Predicted_values_final$STATE=="TX"] <- "Texas"
+
+Predicted_values_final$STATE[Predicted_values_final$STATE=="KS"] <- "Kansas"
+
+Predicted_values_final$STATE[Predicted_values_final$STATE=="NE"] <- "Nebraska"
+
+#### Now editing the names of the counties ## Block to normal script
+
+library(stringr)
+
+Predicted_values_final$COUNTY <- str_to_title(Predicted_values_final$COUNTY)
+
+#### Changing the Yield column to PredictedCropFailureStandardized 
+
+colnames(Predicted_values_final)[3] <- "PredictedCropFailureStandardized"
+
+##### Now Adding the Actual Crop Failure Standardized column to the data ### 
+
+TestFinalCropFailureStandardized <- test_final$CROP_FAILURE
+
+Predicted_values_final <- cbind(Predicted_values_final,TestFinalCropFailureStandardized)
+
+### Changing the name of this column to ActualYieldStandardized ### 
+
+colnames(Predicted_values_final)[7] <- "ActualCropFailureStandardized"
+
+##### Now adding the non standardized real predicted yield, back transforming from the scaled values ## 
+
+### First we have to isolate the predicted values to a real scale ### 
+
+PredictedCropFailureStandardized <- Predicted_values_final$PredictedCropFailureStandardized
+
+### next let's backtransform the data ### Actual Yield 
+
+PredictedCropFailureperAcre <- data.frame(PredictedCropFailureStandardized * attr(test_imputed_cropfailure_scaled_center_factor,"scaled:scale") + attr(test_imputed_cropfailure_scaled_center_factor,"scaled:center"))
+
+#### Now let's isolate the standardized actual values of Yield 
+##### Actual Yield #### 
+
+ActualValuesStandardized <- Predicted_values_final$ActualCropFailureStandardized
+
+##### now let's backtransform the data ### Actual Yield 
+
+ActualCropFailureperAcre <- data.frame(ActualValuesStandardized * attr(test_imputed_cropfailure_scaled_center_factor,"scaled:scale") + attr(test_imputed_cropfailure_scaled_center_factor,"scaled:center"))
+
+
+### Now Column Binding the PredictedYieldLBperAcre and ActualYieldLBperacre and AREA PLANTED IN ACRES 
+
+Predicted_values_final <- cbind(Predicted_values_final,PredictedCropFailureperAcre,ActualCropFailureperAcre)
+
+### Now renaming the the columns ### 
+
+colnames(Predicted_values_final)[8] <- "PredictedCropFailureperAcre"
+
+colnames(Predicted_values_final)[9] <- "ActualCropFailureperAcre"
+
+### Adding the Area Planted column to the final values ### 
+
+AreaPlantedinAcres <- test_imputed$AREA.PLANTED..OIL.TYPE.in.ACRES
+
+Predicted_values_final <- cbind(Predicted_values_final,AreaPlantedinAcres)
+
+
+##### Writing out the final prediction file ### 
+
+write.csv(Predicted_values_final,"D:/Drive_C_2_18_21/PhD_WORK/Chapter_4/Final_Project/FINAL_PLOTS_and_data/PredictedCropFailure.csv")
+
+```
+
+
+
