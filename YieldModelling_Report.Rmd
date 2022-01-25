@@ -1,0 +1,198 @@
+---
+title: "Yield Modelling"
+output: 
+  flexdashboard::flex_dashboard:
+    orientation: columns
+    vertical_layout: fill
+---
+
+```{r setup, include=FALSE}
+library(flexdashboard)
+library(ggplot2)
+library(lattice)
+library(caret)
+library(randomForest)
+library(dplyr)
+library(plotly)
+library(ggthemes)
+
+## reading in the yield values ### 
+
+
+Yield <- read.csv("D:/Drive_C_2_18_21/PhD_WORK/Chapter_4/Final_Project/FINAL_PLOTS_and_data/PredictedYield.csv")
+
+
+######## 
+
+YieldND <- filter(Yield,STATE=="North Dakota")
+
+YieldND <- YieldND[-1]
+
+#### 
+
+####
+
+YieldND$STATE <- tolower(YieldND$STATE)
+
+YieldND$COUNTY <- tolower(YieldND$COUNTY)
+
+### 
+
+YieldND <- inner_join(YieldND,map_data("county"),
+           by=c("STATE"="region","COUNTY"="subregion"))
+
+
+
+Yield_map_actual <- YieldND %>% 
+  ggplot(aes(x=long,y=lat,group=group,fill=ActualYieldLBperAcre)) +
+  geom_polygon(color='black') +
+  coord_quickmap() +
+  theme_map()
+
+  
+
+### isolating the centroids of the counties ### 
+
+Centroid <- YieldND %>% select(LON,LAT,COUNTY)
+
+### Only include the counties which are present in the map ### 
+
+Yield_map_actual <- Yield_map_actual + 
+      with(Centroid, 
+       annotate(geom="text", x = LON, y=LAT, label = Centroid$COUNTY, 
+                size = 2,color="white",family="Times")
+  )
+
+
+
+###### Now making a plot for the actual #### 
+
+
+Yield_map_predicted <- YieldND %>% 
+  ggplot(aes(x=long,y=lat,group=group,fill=PredictedYieldLBperAcre)) +
+  geom_polygon(color='black') +
+  coord_quickmap() +
+  theme_map()
+
+
+### Only include the counties which are present in the map ### 
+
+Yield_map_predicted <- Yield_map_predicted + 
+  with(Centroid, 
+       annotate(geom="text", x = LON, y=LAT, label = Centroid$COUNTY, 
+                size = 2,color="white",family="Times")
+  )
+
+
+#### 
+
+train <- read.csv("D:/Drive_C_2_18_21/PhD_WORK/Chapter_4/Final_Project/FINAL_DATA/train_yield.csv")
+
+
+####### FEATURE SELECTION BY RFE #### 
+
+subsets <- c(1,5,10,15,20,30,46)
+
+parameters <- rfeControl(functions = rfFuncs,method = "cv",number = 5,verbose = T)
+
+
+set.seed(1234)
+
+Rfe_features <- rfe(YIELD..OIL.TYPE.in.LB...ACRE~.,data = train,
+                    sizes=subsets,rfeControl=parameters)
+
+Rfe_features
+
+```
+
+
+ACTUAL VS PREDICTED VALUES
+=====================================  
+
+Column {data-width=500}
+-----------------------------------------------------------------------
+
+### ACTUAL SEED YIELD IN NORTH DAKOTA
+
+```{r}
+
+
+ggplotly(Yield_map_actual)
+
+
+
+```
+
+Column {data-width=500}
+-----------------------------------------------------------------------
+
+### PREDICTED SEED YIELD IN NORTH DAKOTA
+
+```{r}
+
+
+ggplotly(Yield_map_predicted)
+
+
+```
+
+
+
+MODEL PERFORMANCE {data-orientation=rows}
+========================================
+
+Row {data-height=500}
+------------------------------------------------------------------------
+
+### TOP FIVE MOST IMPORTANT FEATURES 
+
+```{r}
+##### 
+
+Rf_IMP <- read.csv("D:/Drive_C_2_18_21/PhD_WORK/Chapter_4/Final_Project/FINAL_DATA/Rfe_Imp_Yield.csv")
+
+## renaming the first column ### 
+
+Rf_IMP <- rename(Rf_IMP,Features=X)
+
+#### Only keeping the top 5 features ##
+
+Rf_IMP <- Rf_IMP[c(1:5),]
+
+### 
+
+Rf_IMP[Rf_IMP=="NationalCommodityCropProductivityIndex"] <- "NCCPI"
+
+
+p<-ggplot(Rf_IMP, aes(x=Features, y=Overall, fill=Features)) +
+  geom_bar(stat="identity")+theme_minimal() +
+  coord_flip() +
+  ggtitle("Important Features")+
+  theme(plot.title = element_text(color="black", size=14, face="bold"),
+    axis.title.x = element_text(color="red", size=14, face="bold"),
+    axis.title.y = element_text(color="blue", size=14, face="bold"))
+
+ggplotly(p)
+
+```
+
+Row {data-height=500}
+-----------------------------------------------------------------------
+
+### RFE PERFORMANCE 
+
+```{r}
+p <- ggplot(Rfe_features,type=c("o","g"))
+
+ggplotly(p)
+
+```
+
+
+
+
+
+
+
+
+
